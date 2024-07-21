@@ -10,7 +10,7 @@ from alive_progress import alive_bar
 LICHESS_URL = "https://lichess.org/"
 
 
-def get_games(path):
+def get_moves(path):
     with open(path, "rb") as fh, alive_bar(89_342_529) as bar:
         dctx = zstandard.ZstdDecompressor()
         stream_reader = dctx.stream_reader(fh)
@@ -28,9 +28,9 @@ def get_games(path):
 
 
 @dlt.resource
-def games(path):
-    games = get_games(path)
-    while chunk := chain.from_iterable(islice(games, 100_000)):
+def moves(path):
+    moves = get_moves(path)
+    while chunk := chain.from_iterable(islice(moves, 100_000)):
         yield pd.DataFrame.from_records(chunk)
 
 
@@ -41,6 +41,6 @@ pipeline = dlt.pipeline(
     progress=dlt.progress.log(600),
 )
 pipeline.run(
-    games("data/lichess_db_standard_rated_2024-06.pgn.zst"),
+    moves("data/lichess_db_standard_rated_2024-06.pgn.zst"),
     loader_file_format="parquet",
 )
