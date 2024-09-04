@@ -55,8 +55,8 @@ def get_moves(path):
 @dlt.resource
 def moves(path):
     moves = get_moves(path)
-    while chunk := chain.from_iterable(islice(moves, 100_000)):
-        yield pa.Table.from_pylist(list(chunk), schema=SCHEMA)
+    while chunk := list(chain.from_iterable(islice(moves, 100_000))):
+        yield pa.Table.from_pylist(chunk, schema=SCHEMA)
 
 
 pipeline = dlt.pipeline(
