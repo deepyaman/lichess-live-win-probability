@@ -36,7 +36,7 @@ SCHEMA = pa.schema(
 
 
 def get_moves(path):
-    with open(path, "rb") as fh, alive_bar(89_342_529) as bar:
+    with open(path, "rb") as fh, alive_bar(90_106_180) as bar:
         dctx = zstandard.ZstdDecompressor()
         stream_reader = dctx.stream_reader(fh)
         text_stream = io.TextIOWrapper(stream_reader, encoding="utf-8")
@@ -55,17 +55,17 @@ def get_moves(path):
 @dlt.resource
 def moves(path):
     moves = get_moves(path)
-    while chunk := list(chain.from_iterable(islice(moves, 100_000))):
+    while chunk := list(chain.from_iterable(islice(moves, 1_000_000))):
         yield pa.Table.from_pylist(chunk, schema=SCHEMA)
 
 
 pipeline = dlt.pipeline(
     pipeline_name="lichess",
-    destination=dlt.destinations.filesystem("data"),
+    destination=dlt.destinations.filesystem("/data/deepyaman"),
     dataset_name="lichess",
-    progress=dlt.progress.log(600),
+    progress=dlt.progress.log(600, open("logs/lichess_db_standard_rated_2024-07", "w")),
 )
 pipeline.run(
-    moves("data/lichess_db_standard_rated_2024-06.pgn.zst"),
+    moves("data/lichess_db_standard_rated_2024-07.pgn.zst"),
     loader_file_format="parquet",
 )
