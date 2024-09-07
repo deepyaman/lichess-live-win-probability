@@ -1,5 +1,5 @@
 import io
-from itertools import chain, islice
+from itertools import islice
 
 import chess.pgn
 import dlt
@@ -10,7 +10,7 @@ from alive_progress import alive_bar
 LICHESS_URL = "https://lichess.org/"
 
 
-def get_moves(path):
+def get_games_and_moves(path):
     with open(path, "rb") as fh, alive_bar(89_342_529) as bar:
         dctx = zstandard.ZstdDecompressor()
         stream_reader = dctx.stream_reader(fh)
@@ -20,18 +20,33 @@ def get_moves(path):
             if not site.startswith(LICHESS_URL):
                 raise ValueError(f"Site must start with {LICHESS_URL}")
 
-            yield (
-                {**game.headers, "move_ply": ply, "move_comment": move.comment}
-                for ply, move in enumerate(game.mainline(), start=1)
-            )
+            game_id = site[len(LICHESS_URL) :]
+            yield {
+                "game_id": game_id,
+                **game.headers,
+                "moves": [
+                    {"game_id": game_id, "ply": ply, "comment": move.comment}
+                    for ply, move in enumerate(game.mainline(), start=1)
+                ],
+            }
             bar()
 
 
 @dlt.resource
-def moves(path):
-    moves = get_moves(path)
-    while chunk := chain.from_iterable(islice(moves, 100_000)):
-        yield pd.DataFrame.from_records(chunk)
+def games_and_moves(path):
+    games_and_moves = get_games_and_moves(path)
+    while True:
+        games = []
+        moves = []
+        for game in islice(games_and_moves, 100_000):
+            moves += game.pop("moves")
+            games.append(game)
+
+        if not games:
+            break
+
+        yield dlt.mark.with_table_name(pd.DataFrame.from_records(games), "games")
+        yield dlt.mark.with_table_name(pd.DataFrame.from_records(moves), "moves")
 
 
 pipeline = dlt.pipeline(
@@ -41,6 +56,6 @@ pipeline = dlt.pipeline(
     progress=dlt.progress.log(600),
 )
 pipeline.run(
-    moves("data/lichess_db_standard_rated_2024-06.pgn.zst"),
+    games_and_moves("data/lichess_db_standard_rated_2024-06.pgn.zst"),
     loader_file_format="parquet",
 )
