@@ -32,7 +32,7 @@ def get_games_and_moves(path):
             bar()
 
 
-@dlt.resource
+@dlt.resource(file_format="parquet")
 def games_and_moves(path):
     games_and_moves = get_games_and_moves(path)
     while True:
@@ -49,13 +49,6 @@ def games_and_moves(path):
         yield dlt.mark.with_table_name(pd.DataFrame.from_records(moves), "moves")
 
 
-pipeline = dlt.pipeline(
-    pipeline_name="lichess",
-    destination=dlt.destinations.filesystem("data"),
-    dataset_name="lichess",
-    progress=dlt.progress.log(600),
-)
-pipeline.run(
-    games_and_moves("data/lichess_db_standard_rated_2024-06.pgn.zst"),
-    loader_file_format="parquet",
-)
+@dlt.source
+def lichess_db(path):
+    return games_and_moves(path)
