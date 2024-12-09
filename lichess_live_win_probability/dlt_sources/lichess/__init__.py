@@ -32,7 +32,7 @@ def get_games_and_moves(path):
             bar()
 
 
-@dlt.resource(file_format="parquet")
+@dlt.resource(selected=False)
 def games_and_moves(path):
     games_and_moves = get_games_and_moves(path)
     while True:
@@ -45,10 +45,20 @@ def games_and_moves(path):
         if not games:
             break
 
-        yield dlt.mark.with_table_name(pd.DataFrame.from_records(games), "games")
-        yield dlt.mark.with_table_name(pd.DataFrame.from_records(moves), "moves")
+        yield {"games": games, "moves": moves}
+
+
+@dlt.transformer(file_format="parquet")
+def games(games_and_moves):
+    return pd.DataFrame.from_records(games_and_moves["games"])
+
+
+@dlt.transformer(file_format="parquet")
+def moves(games_and_moves):
+    return pd.DataFrame.from_records(games_and_moves["moves"])
 
 
 @dlt.source
 def lichess_db(path):
-    return games_and_moves(path)
+    records = games_and_moves(path)
+    return records | games, records | moves
