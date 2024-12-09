@@ -1,4 +1,4 @@
-from dagster import AssetExecutionContext, Definitions
+from dagster import AssetExecutionContext
 from dagster_embedded_elt.dlt import DagsterDltResource, dlt_assets
 from dlt import pipeline, destinations, progress
 
