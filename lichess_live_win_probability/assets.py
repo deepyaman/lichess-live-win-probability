@@ -1,4 +1,4 @@
-from dagster import AssetExecutionContext
+from dagster import AssetExecutionContext, SourceAsset
 from dagster_embedded_elt.dlt import DagsterDltResource, dlt_assets
 from dlt import pipeline, destinations, progress
 
@@ -18,3 +18,8 @@ from lichess_live_win_probability.dlt_sources.lichess import lichess_db
 )
 def lichess_assets(context: AssetExecutionContext, dlt: DagsterDltResource):
     yield from dlt.run(context=context)
+
+
+lichess_source_assets = [
+    SourceAsset(key, group_name="lichess") for key in lichess_assets.dependency_keys
+]
